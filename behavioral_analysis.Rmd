@@ -1,0 +1,280 @@
+---
+title: "Behavioral data analyses"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(here)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(ggsci)
+library(ez)
+library(apa)
+
+rm(list=ls())
+
+source(here("scripts","behavioral_analysis_scripts.R"))
+```
+
+# Introduction
+
+This file documents and presents the analysis and code used to produce the behavioral results presented in Section 3.1 of the manuscript as well as the plots of Figure 1. 
+
+```{r,cache=TRUE,warning=FALSE,message=FALSE }
+
+# Load session data
+all_subject_sessions <- read.table(here("data/subjectBlockData.csv"), header=TRUE, sep=";")
+
+subject_data_dirs<-list.dirs(here("data/behav"), recursive = FALSE)
+
+# Import and pre-process all data
+for (subject_dir in subject_data_dirs){
+  
+  subject_data<-summarise_subject_behav_data(subject_dir,all_subject_sessions) 
+  subject_nb<-strsplit(subject_dir, "/")[[1]][6]
+  
+  nbTrialsHemifield<-compute_nb_trials_per_condition(subject_dir,all_subject_sessions) 
+  nbTrialsHemifield$subject_nb<-subject_nb
+  
+  behav_data_temp<-subject_data$all_data
+  behav_data_temp$subject_nb<-subject_nb
+  
+  falseAlarm_data_temp<-data.frame(subject_data$falseAlarm,subject_nb)
+  
+  if (!exists('behav_data')){
+    behav_data<-behav_data_temp
+    falseAlarm_data<-falseAlarm_data_temp
+    rm(behav_data_temp,falseAlarm_data_temp)
+  }else
+  {
+    behav_data<-rbind(behav_data,behav_data_temp)
+    falseAlarm_data<-rbind(falseAlarm_data,falseAlarm_data_temp)
+    rm(behav_data_temp,falseAlarm_data_temp)
+  }
+  
+} 
+
+behav_data$contrast<-factor(behav_data$contrast, levels = c("Low", "High"))
+behav_data<-droplevels(behav_data)
+
+behav_data<-behav_data%>%
+  mutate(stimHemifield=ifelse((cueValidity == "valid" & cuedHemifield == "left") | 
+                              (cueValidity == "invalid" & cuedHemifield == "right"),
+                              "Left","Right"))%>%
+  rename(Contrast=contrast)
+
+falseAlarm_data <- falseAlarm_data %>% rename(false_alarm_rate = mean.hitRate.)
+
+
+```
+
+# False alarm rate
+
+We first display the per-subjet false alarm rates. Low alarm rates ensure that participants were in fact carrying out the task properly and not merely responding randomly. This is critical since the low contrast condition was calibrated for a 50% detection rate.
+
+```{r}
+falseAlarm_data$trial_type<-"catch"
+false_alarm_plot<-ggplot(data=falseAlarm_data, 
+                         aes(x=trial_type,y=false_alarm_rate)) +
+  geom_jitter(width=0.05, shape=1)+
+  theme_classic() + 
+  scale_y_continuous(breaks=seq(0,.15,.02)) + ylim(0,.15) +
+  theme(axis.title.x=element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank()) +
+  ylab("False Alarm Rate") 
+
+  
+false_alarm_plot
+```
+
+
+# Stimulus detection data
+In the low contrast, stimulus detection was around the calibrated detection threshold of 0.5.
+In the high contrast, stimulus detection was at ceiling.
+
+```{r, message=FALSE, warning=FALSE}
+detection_data_summary<-behav_data%>%
+  group_by(stimHemifield,cueValidity,Contrast) %>%
+  summarise(sd = sd(hitRate_det),
+            hitRate_det = mean(hitRate_det),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n),
+         ci = qt(1 - (0.05 / 2), n - 1) * se)
+
+pd <- position_dodge(width = 0.75)
+
+
+detection_Plot<-ggplot(data=behav_data , aes(x=stimHemifield , y=hitRate_det))+ 
+  geom_violin(aes(fill=cueValidity),position = pd, alpha=0.5) +
+  geom_errorbar(data=detection_data_summary ,
+                aes(ymin=hitRate_det-ci,ymax=hitRate_det+ci,group=cueValidity),
+                position = pd, 
+                width = 0.2) +        # Large points
+  scale_shape_manual(values=c(21,24), 
+                     name="Cue Validity") +
+  geom_point(data=detection_data_summary  , position=pd , size=3,
+             fill="white", aes(shape=cueValidity) ) +
+  facet_grid(. ~ Contrast, labeller = label_both) + 
+  theme_tufte() + 
+  scale_fill_ucscgb(name="Cue Validity") +
+  scale_y_continuous(breaks=seq(0,1,.25)) + ylim(0,1) +
+  theme(legend.position="bottom") +
+  xlab("Stimulus Hemifield") + 
+  ylab("Detection Hit Rate")
+detection_Plot
+
+```
+
+To investigate the role of attention on stimulus detection, we ran a repeated-measures 2x2 ANOVA with Cue Validity and Stimulus Hemifield as factors. We first logit transformed the proportional hit rate to normalize the distribution. 
+
+```{r, message=FALSE, warning=FALSE}
+hitRate_det_data<-behav_data%>%
+  filter(Contrast=="Low")%>%
+  select(hitRate_det, cueValidity,stimHemifield,subject_nb) %>%
+  mutate(hitRate_det_trans=qlogis(hitRate_det))
+
+hitRate_det_ANOVA <- ezANOVA(hitRate_det_data, dv=hitRate_det_trans, 
+                             wid=subject_nb, 
+                             within=.(cueValidity, stimHemifield),
+                             detailed=TRUE)
+hitRate_det_ANOVA$ANOVA
+
+apa(hitRate_det_ANOVA,  format = "rmarkdown", print = TRUE)
+```
+
+# Stimulus discrimination data
+In the low contrast, stimulus discrimination  was at chance level.
+In the high contrast, stimulus discrimination was around the calibrated detection threshold of 0.5.
+
+```{r, message=FALSE, warning=FALSE}
+discrimination_data_summary<-behav_data%>%
+  group_by(stimHemifield,cueValidity,Contrast) %>%
+  summarise(sd = sd(hitRate_disc),
+            hitRate_disc = mean(hitRate_disc),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n),
+         ci = qt(1 - (0.05 / 2), n - 1) * se)
+
+pd <- position_dodge(width = 0.75)
+
+
+discrimination_plot<-ggplot(data=behav_data , aes(x=stimHemifield , y=hitRate_disc))+ 
+  geom_violin(aes(fill=cueValidity),position = pd, alpha=0.5) +
+  geom_errorbar(data=discrimination_data_summary ,
+                aes(ymin=hitRate_disc-ci,ymax=hitRate_disc+ci,group=cueValidity),
+                position = pd, 
+                width = 0.2) +        # Large points
+  scale_shape_manual(values=c(21,24), 
+                     name="Cue Validity") +
+  geom_point(data=discrimination_data_summary  , position=pd , size=3,
+             fill="white", aes(shape=cueValidity) ) +
+  facet_grid(. ~ Contrast, labeller = label_both) + 
+  theme_tufte() + 
+  scale_fill_ucscgb(name="Cue Validity") +
+  scale_y_continuous(breaks=seq(0,1,.25)) + ylim(0,1) +
+  theme(legend.position="bottom") +
+  xlab("Stimulus Hemifield") + 
+  ylab("Detection Hit Rate")
+discrimination_plot
+
+```
+
+
+To investigate the role of attention on stimulus discrimination, we ran a repeated-measures 2x2 ANOVA with Cue Validity and Stimulus Hemifield as factors. As performance for low contrast stimuli was at chance level, we only analyzed high contrast data. We first logit transformed the proportional hit rate to normalize the distribution. 
+
+
+```{r, message=FALSE, warning=FALSE}
+hitRate_disc_data<-behav_data%>%
+  filter(Contrast=="High")%>%
+  select(hitRate_disc, cueValidity,stimHemifield,subject_nb) %>%
+  mutate(hitRate_disc_trans=qlogis(hitRate_disc))
+
+hitRate_disc_ANOVA <- ezANOVA(hitRate_disc_data, dv=hitRate_disc_trans, 
+                             wid=subject_nb, 
+                             within=.(cueValidity, stimHemifield),
+                             detailed=TRUE)
+hitRate_disc_ANOVA$ANOVA
+
+apa(hitRate_disc_ANOVA,  format = "rmarkdown", print = TRUE)
+```
+
+
+# Reaction times analyses
+
+
+```{r, message=FALSE, warning=FALSE}
+RT_data_summary<-behav_data%>%
+  group_by(stimHemifield,cueValidity,Contrast) %>%
+  summarise(sd = sd(responseRT),
+            responseRT = mean(responseRT),
+            n = n()) %>%
+  mutate(se = sd / sqrt(n),
+         ci = qt(1 - (0.05 / 2), n - 1) * se)
+
+pd <- position_dodge(width = 0.75)
+
+
+discrimination_plot<-ggplot(data=behav_data , aes(x=stimHemifield , y=responseRT))+ 
+  geom_violin(aes(fill=cueValidity),position = pd, alpha=0.5) +
+  geom_errorbar(data=RT_data_summary ,
+                aes(ymin=responseRT-ci,ymax=responseRT+ci,group=cueValidity),
+                position = pd, 
+                width = 0.2) +        # Large points
+  scale_shape_manual(values=c(21,24), 
+                     name="Cue Validity") +
+  geom_point(data=RT_data_summary  , position=pd , size=3,
+             fill="white", aes(shape=cueValidity) ) +
+  facet_grid(. ~ Contrast, labeller = label_both) + 
+  theme_tufte() + 
+  scale_fill_ucscgb(name="Cue Validity") +
+  theme(legend.position="bottom") +
+  xlab("Stimulus Hemifield") + 
+  ylab("Detection Hit Rate")
+discrimination_plot
+
+```
+
+
+We analyzed the RT data in two separate ANOVAs for low and high contrast data. 
+
+## Low contrast condition
+
+```{r, message=FALSE, warning=FALSE}
+RT_low_data<-behav_data%>%
+  filter(Contrast=="Low")%>%
+  select(responseRT, cueValidity,stimHemifield,subject_nb) 
+
+RT_low_ANOVA <- ezANOVA(RT_low_data, dv=responseRT, 
+                             wid=subject_nb, 
+                             within=.(cueValidity, stimHemifield),
+                             detailed=TRUE)
+RT_low_ANOVA$ANOVA
+
+apa(RT_low_ANOVA,  format = "rmarkdown", print = TRUE)
+```
+
+
+## Low contrast condition
+
+```{r, message=FALSE, warning=FALSE}
+RT_high_data<-behav_data%>%
+  filter(Contrast=="High")%>%
+  select(responseRT, cueValidity,stimHemifield,subject_nb) 
+
+RT_high_ANOVA <- ezANOVA(RT_high_data, dv=responseRT, 
+                             wid=subject_nb, 
+                             within=.(cueValidity, stimHemifield),
+                             detailed=TRUE)
+RT_high_ANOVA$ANOVA
+
+apa(RT_high_ANOVA,  format = "rmarkdown", print = TRUE)
+```
+
+
+
+
+

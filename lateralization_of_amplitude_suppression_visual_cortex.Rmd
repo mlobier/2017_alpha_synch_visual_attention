@@ -1,0 +1,197 @@
+---
+title: "Lateralization of phase-synchrony and amplitudes"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(ggplot2)
+library(here)
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(ggsci)
+library(RColorBrewer)
+library(stringr)
+# library (grid)
+
+# library (R.utils)
+# library (R.matlab)
+# library(ez)
+# library(BSDA)
+
+source(here("scripts","lateralization_of_amplitude_suppression_visual_cortex_functions.R" ))
+```
+
+This file documents and presents the analysis and code used to produce results relating to the lateralization of amplitude suppression presented in Section 3.6 of the manuscript as well as the plots of Figure 5.
+
+The goal here is to produce a plot showing that our data replicate the classic result of having more alpha suppression in the contralateral visual cortex than in the ipsilateisual cortex during visuospatial attention.
+ral v
+Here we plot the log of the baseline corrected amplitudes for the low alpha frequency bands (i.e., between 6-9 Hz) which were extracted for each participant from GDM.
+Amplitude modulations compared to baseline are averaged across the entire visual cortex as defined by the morphing with the yeo parcellation. 
+
+
+
+## Amplitude suppression is different between ipsi and contralateral visual cortex
+
+We first plot the data from cue-onset (0 ms) up to a second after cue-onset.
+We plot the median value across subjects as well as the 25% and 75% quantile to give an overview of the data variability across participants. 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+# Load parcel assignments to the different systems as well as ordered parcel names
+system_assignements<-read.table(here("data","parcel_system_assignments.csv"), 
+                                header=FALSE, sep=";")[c(1,4)]
+
+names(system_assignements)<-c('system_H','parcel_1')
+
+parcel_names<- read.table(here("data", "vertexNames.csv"), header=TRUE, sep=';')
+names(parcel_names)<-c('parcel_1', 'index')
+
+
+# Load and preprocess parcel amplitues for low alpha frequencies
+# Amplitude data is already baseline corrected
+
+attend_condition<-"Attention_left_"
+
+file_list<-list.files(here("data","parcel_amplitudes"), 
+                      pattern=paste(attend_condition,"*",sep="."), 
+                      recursive=TRUE, full.names=TRUE)
+
+attend_left_data <- process_amplitude_data(file_list, parcel_names, 
+                                           system_assignements,attend_condition) 
+
+# preprocess amplitude date for teh attend right condition
+
+attend_condition<-"Attention_right_"  
+
+file_list<-list.files(here("data","parcel_amplitudes"), 
+                      pattern=paste(attend_condition,"*",sep="."), 
+                      recursive=TRUE, full.names=TRUE)
+attend_right_data <- process_amplitude_data(file_list, parcel_names, 
+                                            system_assignements,attend_condition) 
+
+# Combine data, 
+# average over frequencies 
+# add a ipsi/contra variable
+# remove unused TW and participants
+
+visual_system_amplitude_data<-rbind(attend_left_data, attend_right_data) %>%
+  group_by(TWin, hemisphere,subjectNb,condition) %>%
+  summarise(logAmp=mean(logAmp)) %>%
+  mutate(hemi_type=if_else(str_detect(hemisphere, regex(condition, ignore_case = TRUE))
+                           , "Ipsi", "Contra")) %>%
+  filter(TWin>-.21 & subjectNb!='S03' & subjectNb!='S11' & subjectNb!='S09')
+
+```
+
+
+```{r , echo=FALSE,   warning=FALSE, message=FALSE}
+#Create averages  for ribbon in figure
+
+visual_system_amplitude_summary<-visual_system_amplitude_data %>% 
+ group_by(TWin , hemi_type, condition) %>%
+ summarise ( upQuan=quantile(logAmp,0.75), lowQuan=quantile(logAmp,0.25), logAmp=median(logAmp)) %>%
+  filter(TWin>=0 & TWin<=1) %>%
+  mutate(T_win=TWin*1000) %>%
+  rename(attention=condition) %>%
+  select(-TWin)
+
+plotDataAvFreq<-ggplot(visual_system_amplitude_summary, aes(x=T_win, y= logAmp,  color=hemi_type, fill=hemi_type)) +
+geom_ribbon(aes(ymin = lowQuan, ymax = upQuan), alpha=0.2) +
+  geom_line( size=1) +    # Use hollow circles aes(color=time)
+ 
+  facet_grid( . ~ attention , labeller = label_both) +
+  scale_x_continuous(breaks=seq(-200, 1000, 200))  +
+  scale_y_continuous(breaks=seq(-.4, .025, 0.01))  +
+  scale_fill_brewer(palette="Set1", name="Hemisphere")  +
+  scale_colour_brewer(palette="Set1", name="Hemisphere")  +
+  theme_classic() + 
+  theme(legend.position="bottom") +
+  xlab("Time (ms)") + 
+  ylab("log(Amplitudes)")
+
+plotDataAvFreq
+
+```
+
+## Statistical testing
+
+In order to reduce the number of statistical comparisons, we average values within the 200 ms time-windows used throughout the manuscript.
+We run a statistical comparison for each time-window and attend condition and correct for multiple comps (6 conditions) using Holms Bonferroni corrections
+
+We notice that for the third time window in attend left condition, the data is very skewed, and in different directions for each condition, violating the assumptions of the wilcoxon paired test. We therefore carry out a simple sign test for all conditions and time-windows in order to have comparable power and p-values across all comparisons.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Create new TW binning variable
+
+attach(visual_system_amplitude_data)
+visual_system_amplitude_data$TW_Bin[TWin > 0.4 & TWin < 0.6] <- '400-600 ms'
+visual_system_amplitude_data$TW_Bin[TWin > 0.6 & TWin < 0.8] <- '600-800 ms'
+visual_system_amplitude_data$TW_Bin[TWin > 0.8 & TWin < 1] <- '800-1000 ms'
+detach(visual_system_amplitude_data) 
+
+#Remove unused data (ie, Overlapping TWin that do not fit into bins)
+visual_system_amplitude_data <- na.omit(visual_system_amplitude_data) 
+
+#Average over bins
+visual_system_amplitude_data_stats <- visual_system_amplitude_data %>%
+   mutate(condition=if_else(condition=='left', "Attend Left", "Attend Right")) %>%
+  group_by(TW_Bin, hemi_type,subjectNb,condition,hemisphere) %>%
+  summarise(logAmp=mean(logAmp)) 
+``` 
+
+```{r}
+
+visualCortexAmpData_Plot<-ggplot(data=visual_system_amplitude_data_stats , 
+                                 aes(x=hemisphere , y=logAmp)) +
+  geom_boxplot( aes(color=hemi_type), width=0.25) +
+  geom_point(aes(color=hemi_type), shape=1) +
+  geom_line(aes(group=subjectNb), linetype=3) +
+  scale_colour_brewer( type = "seq", palette = 'Set1', direction = 1, name="") +
+  facet_grid(TW_Bin ~ condition) +
+  theme_classic() + 
+  theme(legend.position="bottom") +
+  xlab("Hemisphere") + 
+  ylab("log(Amplitudes)")
+visualCortexAmpData_Plot
+
+```
+
+
+```{r}
+
+
+# Code own sign-test to have simple to handle outputs
+compute_sign_test<-function(x){
+  n <-sum((x)!=0)
+  T <- sum(x<0)
+  S <- n - T 
+  p_value<-2*min(1-pbinom(T-1,n,0.5),pbinom(T,n,0.5))
+  data.frame(n=n,S=S,p_value=p_value)}
+
+# Apply sign-test on difference between Ipsi and Contra
+# for each time-window and attend condition
+stats_results <- visual_system_amplitude_data_stats %>%
+  select(-hemisphere) %>%
+  spread(hemi_type,logAmp) %>%
+  mutate(diff=Contra-Ipsi) %>%
+  group_by(condition,TW_Bin) %>%
+  do(compute_sign_test(.$diff)) 
+
+stats_results<-bind_cols(stats_results,data.frame(p_val_corr=p.adjust(stats_results$p_value, method = "holm")))
+# pValue=c(0.0009766, 0.01172, 0.06543,0.01172, 0.2266, 0.0009766 )
+#Extract and Correct pValues
+# signTestResults<-data.frame(signTestResults$TW_Bin, signTestResults$condition,S,pValue,p.adjust(pValue, method = "holm"))
+# names(signTestResults)<-c( 'TW_Bin'  , 'condition',  'S' , 'pValue', 'corrp')
+
+
+
+```
+
+```{r, echo=FALSE, results='asis'}
+
+knitr::kable(stats_results)
+```
+
