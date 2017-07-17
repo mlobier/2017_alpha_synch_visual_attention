@@ -8,9 +8,9 @@ This file documents and presents the analysis and code used to produce the behav
 
 ``` r
 # Load session data
-all_subject_sessions <- read.table(here("data/subjectBlockData.csv"), header=TRUE, sep=";")
+all_subject_sessions <- read.table(here::here("data/subjectBlockData.csv"), header=TRUE, sep=";")
 
-subject_data_dirs<-list.dirs(here("data/behav"), recursive = FALSE)
+subject_data_dirs<-list.dirs(here::here("data/behav"), recursive = FALSE)
 
 # Import and pre-process all data
 for (subject_dir in subject_data_dirs){
@@ -67,12 +67,8 @@ false_alarm_plot<-ggplot(data=falseAlarm_data,
         axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
   ylab("False Alarm Rate") 
-```
 
-    ## Scale for 'y' is already present. Adding another scale for 'y', which
-    ## will replace the existing scale.
-
-``` r
+  
 false_alarm_plot
 ```
 
@@ -144,13 +140,8 @@ hitRate_det_ANOVA$ANOVA
     ## 4 7.756770e-01       5.094636e-05
 
 ``` r
-apa(hitRate_det_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(hitRate_det_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
-
-    ## (Intercept):               *F*(1, 12) = 1.15, *p* = .305, $\eta^2_p$ = .09
-    ## cueValidity:               *F*(1, 12) = 78.03, *p* < .001, $\eta^2_p$ = .87
-    ## stimHemifield:             *F*(1, 12) = 0.11, *p* = .743, $\eta^2_p$ < .01
-    ## cueValidity:stimHemifield: *F*(1, 12) = 0.08, *p* = .776, $\eta^2_p$ < .01
 
 Stimulus discrimination data
 ============================
@@ -218,13 +209,8 @@ hitRate_disc_ANOVA$ANOVA
     ## 4 2.371256e-01       0.007425895
 
 ``` r
-apa(hitRate_disc_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(hitRate_disc_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
-
-    ## (Intercept):               *F*(1, 12) = 82.62, *p* < .001, $\eta^2_p$ = .87
-    ## cueValidity:               *F*(1, 12) = 1.00, *p* = .337, $\eta^2_p$ = .08
-    ## stimHemifield:             *F*(1, 12) = 0.80, *p* = .390, $\eta^2_p$ = .06
-    ## cueValidity:stimHemifield: *F*(1, 12) = 1.55, *p* = .237, $\eta^2_p$ = .11
 
 Reaction times analyses
 =======================
@@ -291,13 +277,8 @@ RT_low_ANOVA$ANOVA
     ## 4 8.738529e-01       8.776397e-05
 
 ``` r
-apa(RT_low_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(RT_low_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
-
-    ## (Intercept):               *F*(1, 12) = 603.00, *p* < .001, $\eta^2_p$ = .98
-    ## cueValidity:               *F*(1, 12) = 14.78, *p* = .002, $\eta^2_p$ = .55
-    ## stimHemifield:             *F*(1, 12) = 0.00, *p* = .979, $\eta^2_p$ < .01
-    ## cueValidity:stimHemifield: *F*(1, 12) = 0.03, *p* = .874, $\eta^2_p$ < .01
 
 Low contrast condition
 ----------------------
@@ -326,10 +307,5 @@ RT_high_ANOVA$ANOVA
     ## 4 5.658636e-01       0.0002263864
 
 ``` r
-apa(RT_high_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(RT_high_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
-
-    ## (Intercept):               *F*(1, 12) = 1404.05, *p* < .001, $\eta^2_p$ = .99
-    ## cueValidity:               *F*(1, 12) = 14.25, *p* = .003, $\eta^2_p$ = .54
-    ## stimHemifield:             *F*(1, 12) = 0.10, *p* = .753, $\eta^2_p$ < .01
-    ## cueValidity:stimHemifield: *F*(1, 12) = 0.35, *p* = .566, $\eta^2_p$ = .03

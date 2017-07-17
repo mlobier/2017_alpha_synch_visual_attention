@@ -1,9 +1,9 @@
-Lateralization of phase-synchrony and amplitudes
+Lateralization of amplitudes
 ================
 
 This file documents and presents the analysis and code used to produce results relating to the lateralization of amplitude suppression presented in Section 3.6 of the manuscript as well as the plots of Figure 5.
 
-The goal here is to produce a plot showing that our data replicate the classic result of having more alpha suppression in the contralateral visual cortex than in the ipsilateisual cortex during visuospatial attention. ral v Here we plot the log of the baseline corrected amplitudes for the low alpha frequency bands (i.e., between 6-9 Hz) which were extracted for each participant from GDM. Amplitude modulations compared to baseline are averaged across the entire visual cortex as defined by the morphing with the yeo parcellation.
+We plot the log of the baseline corrected amplitudes for the low alpha frequency bands (i.e., between 6-9 Hz) which were extracted for each parcel and participant from the main analysis pipeline. Amplitude modulations are then averaged across the entire visual cortex as defined by the morphing with the Yeo parcellation.
 
 Amplitude suppression is different between ipsi and contralateral visual cortex
 -------------------------------------------------------------------------------

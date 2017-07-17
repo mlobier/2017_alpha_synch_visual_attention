@@ -3,7 +3,7 @@ title: "Behavioral data analyses"
 output: github_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE,warning= FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(here)
 library(tidyverse)
@@ -12,23 +12,24 @@ library(ggplot2)
 library(ggthemes)
 library(ggsci)
 library(ez)
-library(apa)
+library(broom)
 
 rm(list=ls())
 
-source(here("scripts","behavioral_analysis_scripts.R"))
+source(here::here("functions","behavioral_analysis_functions.R"))
 ```
 
 # Introduction
 
-This file documents and presents the analysis and code used to produce the behavioral results presented in Section 3.1 of the manuscript as well as the plots of Figure 1. 
+This file documents and presents the analysis and code used to produce the behavioral results presented in Section 3.1 of the manuscript as well as the plots of Figure 1.
+
 
 ```{r,cache=TRUE,warning=FALSE,message=FALSE }
 
 # Load session data
-all_subject_sessions <- read.table(here("data/subjectBlockData.csv"), header=TRUE, sep=";")
+all_subject_sessions <- read.table(here::here("data/subjectBlockData.csv"), header=TRUE, sep=";")
 
-subject_data_dirs<-list.dirs(here("data/behav"), recursive = FALSE)
+subject_data_dirs<-list.dirs(here::here("data/behav"), recursive = FALSE)
 
 # Import and pre-process all data
 for (subject_dir in subject_data_dirs){
@@ -75,7 +76,7 @@ falseAlarm_data <- falseAlarm_data %>% rename(false_alarm_rate = mean.hitRate.)
 
 We first display the per-subjet false alarm rates. Low alarm rates ensure that participants were in fact carrying out the task properly and not merely responding randomly. This is critical since the low contrast condition was calibrated for a 50% detection rate.
 
-```{r}
+```{r, warning= FALSE, message=FALSE}
 falseAlarm_data$trial_type<-"catch"
 false_alarm_plot<-ggplot(data=falseAlarm_data, 
                          aes(x=trial_type,y=false_alarm_rate)) +
@@ -143,7 +144,7 @@ hitRate_det_ANOVA <- ezANOVA(hitRate_det_data, dv=hitRate_det_trans,
                              detailed=TRUE)
 hitRate_det_ANOVA$ANOVA
 
-apa(hitRate_det_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(hitRate_det_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
 
 # Stimulus discrimination data
@@ -199,7 +200,7 @@ hitRate_disc_ANOVA <- ezANOVA(hitRate_disc_data, dv=hitRate_disc_trans,
                              detailed=TRUE)
 hitRate_disc_ANOVA$ANOVA
 
-apa(hitRate_disc_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(hitRate_disc_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
 
 
@@ -254,7 +255,7 @@ RT_low_ANOVA <- ezANOVA(RT_low_data, dv=responseRT,
                              detailed=TRUE)
 RT_low_ANOVA$ANOVA
 
-apa(RT_low_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(RT_low_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
 
 
@@ -271,7 +272,7 @@ RT_high_ANOVA <- ezANOVA(RT_high_data, dv=responseRT,
                              detailed=TRUE)
 RT_high_ANOVA$ANOVA
 
-apa(RT_high_ANOVA,  format = "rmarkdown", print = TRUE)
+# apa(RT_high_ANOVA,  format = "rmarkdown", print = TRUE)
 ```
 
 

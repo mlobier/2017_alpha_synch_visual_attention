@@ -1,5 +1,5 @@
 ---
-title: "Lateralization of phase-synchrony and amplitudes"
+title: "Lateralization of amplitudes"
 output: github_document
 ---
 
@@ -16,22 +16,17 @@ library(RColorBrewer)
 library(stringr)
 # library (grid)
 
-# library (R.utils)
+
 # library (R.matlab)
 # library(ez)
 # library(BSDA)
 
-source(here("scripts","lateralization_of_amplitude_suppression_visual_cortex_functions.R" ))
+source(here::here("functions","lateralization_of_amplitude_suppression_visual_cortex_functions.R" ))
 ```
 
 This file documents and presents the analysis and code used to produce results relating to the lateralization of amplitude suppression presented in Section 3.6 of the manuscript as well as the plots of Figure 5.
 
-The goal here is to produce a plot showing that our data replicate the classic result of having more alpha suppression in the contralateral visual cortex than in the ipsilateisual cortex during visuospatial attention.
-ral v
-Here we plot the log of the baseline corrected amplitudes for the low alpha frequency bands (i.e., between 6-9 Hz) which were extracted for each participant from GDM.
-Amplitude modulations compared to baseline are averaged across the entire visual cortex as defined by the morphing with the yeo parcellation. 
-
-
+We plot the log of the baseline corrected amplitudes for the low alpha frequency bands (i.e., between 6-9 Hz) which were extracted for each parcel and participant from the main analysis pipeline. Amplitude modulations are then averaged across the entire visual cortex as defined by the morphing with the Yeo parcellation. 
 
 ## Amplitude suppression is different between ipsi and contralateral visual cortex
 
@@ -41,7 +36,7 @@ We plot the median value across subjects as well as the 25% and 75% quantile to 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
 # Load parcel assignments to the different systems as well as ordered parcel names
-system_assignements<-read.table(here("data","parcel_system_assignments.csv"), 
+system_assignements<-read.table(here::here("data","parcel_system_assignments.csv"), 
                                 header=FALSE, sep=";")[c(1,4)]
 
 names(system_assignements)<-c('system_H','parcel_1')
@@ -55,7 +50,7 @@ names(parcel_names)<-c('parcel_1', 'index')
 
 attend_condition<-"Attention_left_"
 
-file_list<-list.files(here("data","parcel_amplitudes"), 
+file_list<-list.files(here::here("data","parcel_amplitudes"), 
                       pattern=paste(attend_condition,"*",sep="."), 
                       recursive=TRUE, full.names=TRUE)
 
@@ -66,7 +61,7 @@ attend_left_data <- process_amplitude_data(file_list, parcel_names,
 
 attend_condition<-"Attention_right_"  
 
-file_list<-list.files(here("data","parcel_amplitudes"), 
+file_list<-list.files(here::here("data","parcel_amplitudes"), 
                       pattern=paste(attend_condition,"*",sep="."), 
                       recursive=TRUE, full.names=TRUE)
 attend_right_data <- process_amplitude_data(file_list, parcel_names, 
