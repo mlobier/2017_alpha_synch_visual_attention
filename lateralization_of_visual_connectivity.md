@@ -51,7 +51,8 @@ connection_nb <- connection_nb %>%
   mutate(hemifield=ifelse((grepl("left",type) & attendCondition=="Left") | 
                           (grepl("right",type) & attendCondition=="Right"),
                                                                  "Ipsi","Contra")) %>%
-  mutate(connectionType=factor(connectionType, levels = c("Visual-Visual", "Visual-DAN")))
+  mutate(connectionType=factor(connectionType, levels = c("Visual-Visual", "Visual-DAN"))) %>%
+  mutate(attendCondition=ifelse(attendCondition=="Left","Attend Left", "Attend Right"))
 
 # Plot connection count
 
@@ -123,9 +124,7 @@ for (file in fileList)
 }  
 ```
 
-To quantify the lateralization of connectivty, we compute a laterality index latIndex as
-$$latIndex=\\frac{Ipsi}{Ipsi+Contra}$$
-.
+To quantify the lateralization of connectivty, we compute a laterality index latIndex as latIndex=Ipsi/(Ipsi+Contra) where Ipsi and Contra are the number of connections for the corresponding hemisphere.
 
 We then compute and plot for each attend condition and time-window, the laterality index for all shuffled graphs, its 0.025 and .975 confidence limits as well as its value for our original graphs.
 
@@ -138,8 +137,9 @@ shuffled_connection_nb<-shuffled_connection_nb %>%
   mutate(hemifield=ifelse((grepl("left",type) & attendCondition=="Left") | 
                           (grepl("right",type) & attendCondition=="Right"),
                                                                  "Ipsi","Contra")) %>%
-  mutate(connectionType=factor(connectionType, levels = c("Visual-Visual", "Visual-DAN")))
-
+  mutate(connectionType=factor(connectionType, levels = c("Visual-Visual", "Visual-DAN"))) %>%
+  mutate(attendCondition=ifelse(attendCondition=="Left","Attend Left", "Attend Right"))
+  
 # Compute laterality indices
 # Origina data
 laterality_index_data<-connection_nb %>%
@@ -185,4 +185,4 @@ propDistribution
 
 ![](lateralization_of_visual_connectivity_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)
 
-These data show that connectivty in the visual system is more lateralized than would be expected by chance in the first and third time-windows, regardless of the direction of attention. There are consistenly more connections in the ipsilateral than in the contralateral visual cortex. In contrast, there is no systematic lateralization of connectivity between the visual system and DAN.
+These data show that connectivity in the visual system is more lateralized than would be expected by chance in the first and third time-windows, regardless of the direction of attention. There are consistenly more connections in the ipsilateral than in the contralateral visual cortex. In contrast, there is no systematic lateralization of connectivity between the visual system and DAN.
